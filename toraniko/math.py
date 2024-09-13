@@ -196,3 +196,35 @@ def exp_weights(window: int, half_life: int) -> np.ndarray:
         raise TypeError("`half_life` must be an integer type") from e
     decay = np.log(2) / half_life
     return np.exp(-decay * np.arange(window))[::-1]
+
+
+def rolling_cov(
+    col1: str = 'asset_returns',
+    col2: str = 'index_return',
+    over_col: str = 'symbol',
+    window: int = 125
+) -> pl.Expr:
+    """
+    calculate rolling covariance between `col1` and `col2` partitioned by `over_col`
+    can also be used to calculate variance if col1 == col2
+
+    Parameters
+    ----------
+    col1, col2: String: the columns to be considered for covariance
+    over_col: String: column which partitions the data
+    window: Integer: lookback period for rolling covariance
+
+    Returns
+    -------
+    Polars Expr
+    """
+    xy = pl.col(col1) * pl.col(col2)
+    x_mean = pl.col(col1).rolling_mean(window_size=window).over(over_col)
+    y_mean = pl.col(col2).rolling_mean(window_size=window).over(over_col)
+
+    xy_mean = xy.rolling_mean(window_size=window).over(over_col)
+    x_mean_y_mean = (x_mean * y_mean)
+
+    cov_col = (xy_mean - x_mean_y_mean)
+
+    return cov_col
