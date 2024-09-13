@@ -228,3 +228,44 @@ def rolling_cov(
     cov_col = (xy_mean - x_mean_y_mean)
 
     return cov_col
+
+
+def rolling_beta(
+    col1: str = 'asset_returns',
+    col2: str = 'index_return',
+    over_col: str = 'symbol',
+    window: int = 125
+) -> pl.Expr:
+    """
+    calculate the rolling beta of `col1` w.r.t. `col2`, partitioned by `over_col`
+
+    Parameters
+    ----------
+    asset_col: String: asset returns column
+    index_col: String: index returns column
+    over_col: String: column to partition the data by
+    window: Integer: lookback period for rolling calculations
+
+    Returns
+    -------
+    Polars Expr
+    """
+    rolling_cov_asset_index = rolling_cov(
+        col1=col1,
+        col2=col2,
+        over_col=over_col,
+        window=window
+    )
+
+    rolling_var_index = rolling_cov(
+        col1=col2,
+        col2=col2,
+        over_col=over_col,
+        window=window
+    )
+
+    rolling_beta = pl.when(rolling_var_index !=0).then(
+        rolling_cov_asset_index / rolling_var_index
+    ).otherwise(None)
+
+    return rolling_beta
